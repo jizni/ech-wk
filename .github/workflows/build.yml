@@ -94,6 +94,18 @@ jobs:
             artifact_suffix: "-softrouter"
             enable_gui: false
             cgo_enabled: "0"
+            
+          # ✅ Android arm64
+          - os: ubuntu-latest
+            goos: android
+            goarch: arm64
+            exe_ext: ""
+            archive_format: tar.gz
+            archive_ext: .tar.gz
+            target: android
+            artifact_suffix: "-android"
+            enable_gui: false
+            cgo_enabled: "0"
 
     runs-on: ${{ matrix.os }}
     
