@@ -1265,13 +1265,14 @@ class MainWindow(QMainWindow):
             }
         
         # 创建副本并更新为界面当前值
-            server = server.copy()
-            server['server'] = self.server_edit.text()
-            server['listen'] = self.listen_edit.text()
-            server['token'] = self.token_edit.text()
-            server['ip'] = self.ip_edit.text()
-            server['dns'] = self.dns_edit.text()
-            server['ech'] = self.ech_edit.text()
+        server = server.copy()
+        server['server'] = self.server_edit.text()
+        server['listen'] = self.listen_edit.text()
+        server['token'] = self.token_edit.text()
+        server['ip'] = self.ip_edit.text()
+        server['dns'] = self.dns_edit.text()
+        server['ech'] = self.ech_edit.text()
+        
         # 保存分流模式
         routing_mode = self.routing_combo.currentData()
         if routing_mode:
@@ -1279,6 +1280,7 @@ class MainWindow(QMainWindow):
         else:
             # 如果没有选择，使用默认值
             server['routing_mode'] = server.get('routing_mode', 'bypass_cn')
+        
         return server
     
     def on_server_changed(self):
