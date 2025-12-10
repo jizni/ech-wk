@@ -163,33 +163,87 @@ jobs:
           fi
         shell: bash
 
+      - name: Check application icon
+        if: startsWith(github.ref, 'refs/tags/') && matrix.enable_gui == true
+        run: |
+          # 检查图标文件是否存在（图标文件已包含在仓库中）
+          echo "Checking for icon files..."
+          ls -lh app_icon.* 2>/dev/null || echo "No icon files found"
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            if [ -f "app_icon.ico" ]; then
+              echo "✓ Found app_icon.ico"
+            elif [ -f "app_icon.png" ]; then
+              echo "✓ Found app_icon.png (will be used as icon)"
+            else
+              echo "⚠ No icon file found, PyInstaller will use default icon"
+            fi
+          elif [ "${{ matrix.goos }}" == "darwin" ]; then
+            if [ -f "app_icon.icns" ]; then
+              echo "✓ Found app_icon.icns"
+            elif [ -f "app_icon.png" ]; then
+              echo "✓ Found app_icon.png (will be used as icon)"
+            else
+              echo "⚠ No icon file found, PyInstaller will use default icon"
+            fi
+          else
+            if [ -f "app_icon.png" ]; then
+              echo "✓ Found app_icon.png"
+            else
+              echo "⚠ No icon file found, PyInstaller will use default icon"
+            fi
+          fi
+        shell: bash
+
       - name: Build Python executable
         if: startsWith(github.ref, 'refs/tags/') && matrix.enable_gui == true
         run: |
+          # 构建 PyInstaller 命令，根据平台添加图标
+          ICON_ARG=""
           if [ "${{ matrix.goos }}" == "windows" ]; then
-            pyinstaller --onefile --windowed --name ECHWorkersGUI --hidden-import=PyQt5 gui.py
+            if [ -f "app_icon.ico" ]; then
+              ICON_ARG="--icon=app_icon.ico"
+            elif [ -f "app_icon.png" ]; then
+              ICON_ARG="--icon=app_icon.png"
+            fi
+            pyinstaller --onefile --windowed --name ECHWorkersGUI --hidden-import=PyQt5 $ICON_ARG gui.py
           elif [ "${{ matrix.goos }}" == "linux" ]; then
             if python -c "import PyQt5.QtWidgets" 2>/dev/null; then
-              pyinstaller --onefile --name ECHWorkersGUI --hidden-import=PyQt5 gui.py
+              if [ -f "app_icon.png" ]; then
+                ICON_ARG="--icon=app_icon.png"
+              fi
+              pyinstaller --onefile --name ECHWorkersGUI --hidden-import=PyQt5 $ICON_ARG gui.py
             else
               echo "PyQt5 not available, skipping GUI build for Linux"
               echo "Only Go executable will be included"
             fi
           else
-            pyinstaller --onefile --name ECHWorkersGUI --hidden-import=PyQt5 gui.py
+            # macOS
+            if [ -f "app_icon.icns" ]; then
+              ICON_ARG="--icon=app_icon.icns"
+            elif [ -f "app_icon.png" ]; then
+              ICON_ARG="--icon=app_icon.png"
+            fi
+            pyinstaller --onefile --name ECHWorkersGUI --hidden-import=PyQt5 $ICON_ARG gui.py
           fi
         shell: bash
 
       - name: Download China IP list
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          echo "Downloading latest China IP list..."
-          curl -L -o chn_ip.txt "https://raw.githubusercontent.com/mayaxcn/china-ip-list/refs/heads/master/chn_ip.txt" || echo "Failed to download, will skip"
+          echo "Downloading latest China IP list (IPv4 and IPv6)..."
+          curl -L -o chn_ip.txt "https://raw.githubusercontent.com/mayaxcn/china-ip-list/refs/heads/master/chn_ip.txt" || echo "Failed to download IPv4 list, will skip"
+          curl -L -o chn_ip_v6.txt "https://raw.githubusercontent.com/mayaxcn/china-ip-list/refs/heads/master/chn_ip_v6.txt" || echo "Failed to download IPv6 list, will skip"
           if [ -f "chn_ip.txt" ]; then
-            echo "✓ China IP list downloaded successfully"
+            echo "✓ China IPv4 IP list downloaded successfully"
             wc -l chn_ip.txt
           else
-            echo "⚠ China IP list download failed, release will continue without it"
+            echo "⚠ China IPv4 IP list download failed, release will continue without it"
+          fi
+          if [ -f "chn_ip_v6.txt" ]; then
+            echo "✓ China IPv6 IP list downloaded successfully"
+            wc -l chn_ip_v6.txt
+          else
+            echo "⚠ China IPv6 IP list download failed, release will continue without it"
           fi
         shell: bash
 
@@ -204,7 +258,11 @@ jobs:
           # 中国IP列表文件（离线版本）
           if [ -f "chn_ip.txt" ]; then
             cp chn_ip.txt release/
-            echo "✓ China IP list included in release"
+            echo "✓ China IPv4 IP list included in release"
+          fi
+          if [ -f "chn_ip_v6.txt" ]; then
+            cp chn_ip_v6.txt release/
+            echo "✓ China IPv6 IP list included in release"
           fi
           
           # GUI（仅桌面版）
@@ -232,7 +290,10 @@ jobs:
             echo "Files:"
             echo "- ech-workers${{ matrix.exe_ext }}: Go compiled core proxy program"
             if [ -f "release/chn_ip.txt" ]; then
-              echo "- chn_ip.txt: China IP list (offline version)"
+              echo "- chn_ip.txt: China IPv4 IP list (offline version)"
+            fi
+            if [ -f "release/chn_ip_v6.txt" ]; then
+              echo "- chn_ip_v6.txt: China IPv6 IP list (offline version)"
             fi
             if [ "${{ matrix.enable_gui }}" = "true" ]; then
               if [ "${{ matrix.goos }}" == "windows" ]; then
